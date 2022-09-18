@@ -1,0 +1,20 @@
+FROM python:alpine as builder
+# checkov:skip=CKV_DOCKER_3: ADD REASON
+# checkov:skip=CKV_DOCKER_2: ADD REASON
+
+RUN apk upgrade --no-cache
+RUN apk add --no-cache gcc musl-dev python3-dev libffi-dev openssl-dev cargo
+
+WORKDIR /source
+
+RUN python3 -m ensurepip --upgrade && python3 -m pip install pex~=2.1.47
+
+COPY requirements.txt /source/
+RUN pex -r /source/requirements.txt -o /source/pex_wrapper
+
+# Build the final image
+FROM python:alpine as final
+RUN apk upgrade --no-cache
+WORKDIR /source
+COPY --from=build /source /source
+ENTRYPOINT [ "/source/pex_wrapper", "app.py" ]
